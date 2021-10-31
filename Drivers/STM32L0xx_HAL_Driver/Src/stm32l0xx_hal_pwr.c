@@ -473,12 +473,12 @@ void HAL_PWR_EnterSLEEPMode(uint32_t Regulator, uint8_t SLEEPEntry)
 
   /* It is forbidden to configure both EN_VREFINT=1 and ULP=1 if the device is
      in Stop mode or in Sleep/Low-power sleep mode */
-  ulpbit = READ_BIT(PWR->CR, PWR_CR_ULP);
-  vrefinbit = READ_BIT(SYSCFG->CFGR3, SYSCFG_CFGR3_EN_VREFINT);
-  if((ulpbit != 0) && (vrefinbit != 0))
-  {
+//  ulpbit = READ_BIT(PWR->CR, PWR_CR_ULP);
+//  vrefinbit = READ_BIT(SYSCFG->CFGR3, SYSCFG_CFGR3_EN_VREFINT);
+//  if((ulpbit != 0) && (vrefinbit != 0))
+//  {
     CLEAR_BIT(PWR->CR, PWR_CR_ULP);
-  }
+//  }
 
   /* Select the regulator state in Sleep mode ---------------------------------*/
   tmpreg = PWR->CR;
@@ -509,10 +509,10 @@ void HAL_PWR_EnterSLEEPMode(uint32_t Regulator, uint8_t SLEEPEntry)
     __WFE();
   }
 
-  if((ulpbit != 0) && (vrefinbit != 0))
-  {
+//  if((ulpbit != 0) && (vrefinbit != 0))
+//  {
     SET_BIT(PWR->CR, PWR_CR_ULP);
-  }
+//  }
 
   /* Additional NOP to ensure all pending instructions are flushed before entering low power mode */
   __NOP();

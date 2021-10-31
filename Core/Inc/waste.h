@@ -28,8 +28,9 @@ extern "C" {
 
 
 /* USER CODE BEGIN Private defines */
-#define NORMAL_WORK_PERIOD 48
-#define SETUP_WORK_PERIOD 6
+#define NORMAL_WORK_PERIOD 24
+#define ALARM_WORK_PERIOD 6
+#define SETUP_WORK_PERIOD 3
 #define CRITICAL_TEMPERATURE 80
 
 typedef struct
@@ -39,11 +40,14 @@ typedef struct
 	uint8_t tempVal;
 	uint8_t setupCount;
 	uint8_t setupMode;
+	uint8_t preDataSendError;
+	uint8_t gpsAlarm;
+	uint8_t gpsAlarmCount;
 } waste_typedef;
 
 typedef struct
 {
-	char MEESAGE[138];
+	char MEESAGE[256];
 } debugMessages_typedef;
 
 extern debugMessages_typedef debugMessages;

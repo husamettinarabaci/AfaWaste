@@ -34,7 +34,6 @@ extern "C" {
 extern RTC_HandleTypeDef hrtc;
 
 /* USER CODE BEGIN Private defines */
-#define WAKEUP_PERIOD_IN_SECOND 300
 
 typedef struct
 {

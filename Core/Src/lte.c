@@ -30,6 +30,8 @@ void LTEInitParams() {
 	lteMessages.AT_QIOPEN[12] = ConvertIdToChar(lteParameters.sessionId);
 	strcpy(lteMessages.AT_QISEND, "AT+QISEND=0,128\r");
 	lteMessages.AT_QISEND[10] = ConvertIdToChar(lteParameters.sessionId);
+	strcpy(lteMessages.AT_QIRD, "AT+QIRD=0,50\r");
+	lteMessages.AT_QIRD[8] = ConvertIdToChar(lteParameters.sessionId);
 	strcpy(lteMessages.AT_QICLOSE, "AT+QICLOSE=0\r");
 	lteMessages.AT_QICLOSE[11] = ConvertIdToChar(lteParameters.sessionId);
 	strcpy(lteMessages.AT_QIACT, "AT+QIACT=1\r");
@@ -42,11 +44,13 @@ void LTEInitParams() {
 	strcpy(lteMessages.AT_QGPS_OFF, "AT+QGPSEND\r");
 	strcpy(lteMessages.AT_QGPSLOC, "AT+QGPSLOC=2\r");
 	strcpy(lteMessages.AT_CFUN, "AT+CFUN=1,1\r");
+	strcpy(lteMessages.AT_CFUNS, "AT+CFUN=0\r");
 	strcpy(lteMessages.AT_CIMI, "AT+CIMI\r");
 	strcpy(lteMessages.AT_QGPSCFG, "AT+QGPSCFG=\"nmeasrc\",1\r");
 	strcpy(lteMessages.AT_QGPSGNMEA, "AT+QGPSGNMEA=\"GGA\"\r");
 	strcpy(lteMessages.POWER_ON, "POWER_ON");
 	strcpy(lteMessages.POWER_OFF, "POWER_OFF");
+	strcpy(lteMessages.SENDDATA, "SENDDATA");
 
 	memset(lteParameters.latitudeData, '*', 11);
 	memset(lteParameters.longitudeData, '*', 11);
@@ -59,11 +63,7 @@ void LTEPowerOn() {
 	HAL_GPIO_WritePin(LTE_PWRKEY_GPIO_Port, LTE_PWRKEY_Pin, GPIO_PIN_SET); // LTE module power key pressed
 	HAL_Delay(LTE_PWRKEY_ENABLE_TIME); // Wait about 2000 ms for process
 	HAL_GPIO_WritePin(LTE_PWRKEY_GPIO_Port, LTE_PWRKEY_Pin, GPIO_PIN_RESET); // LTE module power key released
-	LTEResponseParserBuffer(30000, lteMessages.POWER_ON, sizeof(lteMessages.POWER_ON));
-	if (lteParameters.uartResHeader == HEAD_READY) {
-		DebugSendData("LTE Power Active", 16);
-		lteParameters.powerState = PWR_ACTIVE;
-	}
+	LTEResponseParserBuffer(60000, lteMessages.POWER_ON, sizeof(lteMessages.POWER_ON));
 	LTEPassiveBuffer();
 }
 
@@ -74,40 +74,63 @@ void LTEPowerOff() {
 	HAL_GPIO_WritePin(LTE_PWRKEY_GPIO_Port, LTE_PWRKEY_Pin, GPIO_PIN_SET); // LTE module power key pressed
 	HAL_Delay(LTE_PWRKEY_DISABLE_TIME); // Wait about 2000 ms for process
 	HAL_GPIO_WritePin(LTE_PWRKEY_GPIO_Port, LTE_PWRKEY_Pin, GPIO_PIN_RESET); // LTE module power key released
-	LTEResponseParserBuffer(15000, lteMessages.POWER_OFF, sizeof(lteMessages.POWER_OFF));
-	if (lteParameters.uartResHeader == HEAD_OK && lteParameters.uartResMessage == MESG_POWERDOWN) {
-		DebugSendData("LTE Power Passive", 17);
-		lteParameters.powerState = PWR_PASSIVE;
+	for (int i = 0; i < 15; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.POWER_OFF, sizeof(lteMessages.POWER_OFF));
+		if (lteParameters.uartResMessage == MESG_POWERDOWN) {
+			DebugSendData("LTE Power Passive", 17);
+			break;
+		}
 	}
 	LTEPassiveBuffer();
 }
 
-void LTEReset() {
-	DebugSendData("LTE Reset", 9);
+void LTEEnable() {
+	DebugSendData("LTE Enable", 10);
+	HAL_GPIO_WritePin(LTE_ENABLE_GPIO_Port, LTE_ENABLE_Pin, GPIO_PIN_SET); // LTE module power key pressed
+	HAL_Delay(1000);
+}
+
+void LTEDisable() {
+	DebugSendData("LTE Disable", 11);
+	HAL_GPIO_WritePin(LTE_ENABLE_GPIO_Port, LTE_ENABLE_Pin, GPIO_PIN_RESET); // LTE module power key pressed
+	HAL_Delay(1000);
+	lteParameters.powerState=PWR_PASSIVE;
+}
+
+void LTEResetWithUart() {
+	DebugSendData("LTE Reset With Uart", 19);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT_CFUN, sizeof(lteMessages.AT_CFUN));
-	LTEResponseParserBuffer(20000, lteMessages.AT_CFUN, sizeof(lteMessages.AT_CFUN));
+	for (int i = 0; i < 15; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_CFUN, sizeof(lteMessages.AT_CFUN));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			DebugSendData("LTE Power Active", 16);
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
 void LTEPowerOffWithUart() {
-	DebugSendData("LTE Power Off With Uart", 23);
-	LTEActiveBuffer();
-	LTESendData(huart1, lteMessages.AT_QPOWD, sizeof(lteMessages.AT_QPOWD));
-	LTEResponseParserBuffer(15000, lteMessages.AT_QPOWD, sizeof(lteMessages.AT_QPOWD));
-	if (lteParameters.uartResHeader == HEAD_OK && lteParameters.uartResMessage == MESG_POWERDOWN) {
-		DebugSendData("LTE Power Passive", 17);
-		lteParameters.powerState = PWR_PASSIVE;
+	if (lteParameters.powerState == PWR_ACTIVE) {
+		DebugSendData("LTE Power Off With Uart", 23);
+		LTEActiveBuffer();
+		LTESendData(huart1, lteMessages.AT_QPOWD, sizeof(lteMessages.AT_QPOWD));
+		LTEResponseParserBuffer(5000, lteMessages.AT_QPOWD, sizeof(lteMessages.AT_QPOWD));
+		LTEPassiveBuffer();
 	}
-
-	LTEPassiveBuffer();
 }
 
 void LTEGetIMEI() {
 	DebugSendData("LTE Get IMEI", 12);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT_CGSN, sizeof(lteMessages.AT_CGSN));
-	LTEResponseParserBuffer(2000, lteMessages.AT_CGSN, sizeof(lteMessages.AT_CGSN));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_CGSN, sizeof(lteMessages.AT_CGSN));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
@@ -115,7 +138,12 @@ void LTEGetImsi() {
 	DebugSendData("LTE Get IMSI", 12);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT_CIMI, sizeof(lteMessages.AT_CIMI));
-	LTEResponseParserBuffer(2000, lteMessages.AT_CIMI, sizeof(lteMessages.AT_CIMI));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_CIMI, sizeof(lteMessages.AT_CIMI));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
@@ -123,7 +151,12 @@ void LTEOpenConnection() {
 	DebugSendData("LTE Open Connection", 19);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT_QIOPEN, sizeof(lteMessages.AT_QIOPEN));
-	LTEResponseParserBuffer(1000, lteMessages.AT_QIOPEN, sizeof(lteMessages.AT_QIOPEN));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_QIOPEN, sizeof(lteMessages.AT_QIOPEN));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
@@ -131,7 +164,12 @@ void LTEPrepToSendData() {
 	DebugSendData("LTE Prep To Send Data", 21);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT_QISEND, sizeof(lteMessages.AT_QISEND));
-	LTEResponseParserBuffer(2000, lteMessages.AT_QISEND, sizeof(lteMessages.AT_QISEND));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_QISEND, sizeof(lteMessages.AT_QISEND));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
@@ -139,15 +177,12 @@ void LTEAt() {
 	DebugSendData("LTE At", 6);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT, sizeof(lteMessages.AT));
-	LTEResponseParserBuffer(5000, lteMessages.AT, sizeof(lteMessages.AT));
-	LTEPassiveBuffer();
-}
-
-void LTEAti() {
-	DebugSendData("LTE Ati", 7);
-	LTEActiveBuffer();
-	LTESendData(huart1, lteMessages.ATI, sizeof(lteMessages.ATI));
-	LTEResponseParserBuffer(5000, lteMessages.ATI, sizeof(lteMessages.ATI));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT, sizeof(lteMessages.AT));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
@@ -155,7 +190,12 @@ void LTECloseConnection() {
 	DebugSendData("LTE Close Connection", 20);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT_QICLOSE, sizeof(lteMessages.AT_QICLOSE));
-	LTEResponseParserBuffer(15000, lteMessages.AT_QICLOSE, sizeof(lteMessages.AT_QICLOSE));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_QICLOSE, sizeof(lteMessages.AT_QICLOSE));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
@@ -163,7 +203,12 @@ void LTEPdpOpen() {
 	DebugSendData("LTE Pdp Open", 12);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT_QIACT, sizeof(lteMessages.AT_QIACT));
-	LTEResponseParserBuffer(10000, lteMessages.AT_QIACT, sizeof(lteMessages.AT_QIACT));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_QIACT, sizeof(lteMessages.AT_QIACT));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
@@ -171,7 +216,12 @@ void LTEPdpClose() {
 	DebugSendData("LTE Pdp Close", 13);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT_QIDEACT, sizeof(lteMessages.AT_QIDEACT));
-	LTEResponseParserBuffer(10000, lteMessages.AT_QIDEACT, sizeof(lteMessages.AT_QIDEACT));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_QIDEACT, sizeof(lteMessages.AT_QIDEACT));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
@@ -179,60 +229,47 @@ void LTEPdpConfigure() {
 	DebugSendData("LTE Pdp Configure", 17);
 	LTEActiveBuffer();
 	LTESendData(huart1, lteMessages.AT_QICSGP, sizeof(lteMessages.AT_QICSGP));
-	LTEResponseParserBuffer(2000, lteMessages.AT_QICSGP, sizeof(lteMessages.AT_QICSGP));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_QICSGP, sizeof(lteMessages.AT_QICSGP));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
 void LTESendMsg() {
 	DebugSendData("LTE Send Msg", 12);
+	wasteParameters.gpsAlarm=0;
+	LTEActiveBuffer();
 	LTESendData(huart1, lteParameters.msgToSend, 128);
-}
-
-void LTEGPSPowerOn() {
-	DebugSendData("LTE Gps Power On", 16);
-	LTEActiveBuffer();
-	LTESendData(huart1, lteMessages.AT_QGPS_ON, sizeof(lteMessages.AT_QGPS_ON));
-	LTEResponseParserBuffer(1000, lteMessages.AT_QGPS_ON, sizeof(lteMessages.AT_QGPS_ON));
-	LTEPassiveBuffer();
-	HAL_Delay(LTE_GPS_FIX_WAIT_TIMEOUT);
-}
-
-void LTEGPSPowerOff() {
-	DebugSendData("LTE Gps Power Off", 17);
-	LTEActiveBuffer();
-	LTESendData(huart1, lteMessages.AT_QGPS_OFF, sizeof(lteMessages.AT_QGPS_OFF));
-	LTEResponseParserBuffer(1000, lteMessages.AT_QGPS_OFF, sizeof(lteMessages.AT_QGPS_OFF));
+	for (int i = 0; i < 10; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.SENDDATA, sizeof(lteMessages.SENDDATA));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			wasteParameters.preDataSendError=0;
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
-void LTEGPSNmeaConfig() {
-	DebugSendData("LTE Gps Nmea Config", 19);
+void LTEReceiveMsg() {
+	DebugSendData("LTE Receive Msg", 15);
 	LTEActiveBuffer();
-	LTESendData(huart1, lteMessages.AT_QGPSCFG, sizeof(lteMessages.AT_QGPSCFG));
-	LTEResponseParserBuffer(2000, lteMessages.AT_QGPSCFG, sizeof(lteMessages.AT_QGPSCFG));
-	LTEPassiveBuffer();
-}
-
-void LTEGPSGetNmeaData() {
-	DebugSendData("LTE Gps Get Nmea Data", 21);
-	LTEActiveBuffer();
-	LTESendData(huart1, lteMessages.AT_QGPSGNMEA, sizeof(lteMessages.AT_QGPSGNMEA));
-	LTEResponseParserBuffer(2000, lteMessages.AT_QGPSGNMEA, sizeof(lteMessages.AT_QGPSGNMEA));
-	LTEPassiveBuffer();
-}
-
-void LTEGPSGetData() {
-	DebugSendData("LTE Gps Get Data", 16);
-	LTEActiveBuffer();
-	LTESendData(huart1, lteMessages.AT_QGPSLOC, sizeof(lteMessages.AT_QGPSLOC));
-	LTEResponseParserBuffer(2000, lteMessages.AT_QGPSLOC, sizeof(lteMessages.AT_QGPSLOC));
+	LTESendData(huart1, lteMessages.AT_QIRD, sizeof(lteMessages.AT_QIRD));
+	for (int i = 0; i < 5; ++i) {
+		LTEResponseParserBuffer(2000, lteMessages.AT_QIRD, sizeof(lteMessages.AT_QIRD));
+		if (lteParameters.uartResHeader == HEAD_OK) {
+			break;
+		}
+	}
 	LTEPassiveBuffer();
 }
 
 void LTEActiveBuffer() {
 	uartLTEParameters.active = 0;
-	memset(uartLTEParameters.rxBuffer, '*', 256);
 	uartLTEParameters.rxDataCounter = 0;
+	memset(uartLTEParameters.rxBuffer, '*', 256);
 	uartLTEParameters.active = 1;
 }
 void LTEPassiveBuffer() {
@@ -248,29 +285,25 @@ void LTEResponseParserBuffer(uint32_t delay, char msg[], uint8_t msgSize) {
 	lteParameters.uartResHeader = HEAD_NONE;
 	lteParameters.uartResMessage = MESG_NONE;
 	HAL_Delay(delay);
-	DebugSendData(uartLTEParameters.rxBuffer, 122);
+	DebugSendData(uartLTEParameters.rxBuffer, 196);
 	SearchStatu();
 	if (lteParameters.uartResHeader == HEAD_NONE) {
 		DebugSendData("Header : None", 13);
 	} else if (lteParameters.uartResHeader == HEAD_OK) {
+		lteParameters.powerState=PWR_ACTIVE;
 		DebugSendData("Header : OK", 12);
 	} else if (lteParameters.uartResHeader == HEAD_ERROR) {
+		lteParameters.powerState=PWR_ACTIVE;
 		DebugSendData("Header : Error", 14);
 	} else if (lteParameters.uartResHeader == HEAD_READY) {
+		lteParameters.powerState=PWR_ACTIVE;
 		DebugSendData("Header : Ready", 14);
 	} else {
 		DebugSendData("Header : Not Found", 18);
 	}
-	int comOk = 0;
-	for (int i = 0; i < msgSize; ++i) {
-		if (uartLTEParameters.rxBuffer[i] == msg[i]) {
-			comOk = 1;
-			break;
-		}
-	}
 
 	if (msg == lteMessages.AT_CGSN) {
-		if (comOk && lteParameters.uartResHeader == HEAD_OK) {
+		if (lteParameters.uartResHeader == HEAD_OK) {
 			for (int i = 0; i < 15; ++i) {
 				lteParameters.imeiNum[i] = uartLTEParameters.rxBuffer[sizeof(lteMessages.AT_CGSN) + 1 + i];
 			}
@@ -279,7 +312,7 @@ void LTEResponseParserBuffer(uint32_t delay, char msg[], uint8_t msgSize) {
 	}
 
 	if (msg == lteMessages.AT_CIMI) {
-		if (comOk && lteParameters.uartResHeader == HEAD_OK) {
+		if (lteParameters.uartResHeader == HEAD_OK) {
 			for (int i = 0; i < 15; ++i) {
 				lteParameters.imsiNum[i] = uartLTEParameters.rxBuffer[sizeof(lteMessages.AT_CIMI) + 1 + i];
 			}
@@ -287,9 +320,19 @@ void LTEResponseParserBuffer(uint32_t delay, char msg[], uint8_t msgSize) {
 		}
 	}
 
+	if (msg == lteMessages.AT_QIRD) {
+		if (SearchMessage(0, "AGPS", 4)) {
+			lteParameters.uartResMessage = MESG_AGPS;
+			wasteParameters.gpsAlarm=1;
+			wasteParameters.gpsAlarmCount = 0;
+			DebugSendData("Message : Gps Alarm", 20);
+		}
+	}
+
 	if (msg == lteMessages.AT_QPOWD || msg == lteMessages.POWER_ON || msg == lteMessages.POWER_OFF) {
-		if (SearchMessage(msgSize, "DOWN", 4)) {
+		if (SearchMessage(0, "DOWN", 4)) {
 			lteParameters.uartResMessage = MESG_POWERDOWN;
+			lteParameters.powerState=PWR_PASSIVE;
 			DebugSendData("Message : Power Down", 20);
 		}
 	}

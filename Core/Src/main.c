@@ -102,28 +102,21 @@ int main(void) {
 	WasteInit();
 
 	HAL_Delay(5000);
-
+	DebugSendData("Start App", 9);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-
 	while (1) {
 		DebugSendData("While Start", 11);
 		HAL_Delay(1000);
 		if (rtcParameters.wakeUpFlag) {
 			MainProc();
 		}
-		LTEPowerOffWithUart();
-		HAL_Delay(1000);
-		if (lteParameters.uartResHeader == HEAD_READY) {
-			LTEPowerOff();
-		}
 		rtcParameters.wakeUpFlag = 0;
 		DebugSendData("Sleep Mode", 10);
 		HAL_SuspendTick();
-		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFE);
-		HAL_ResumeTick();
+		HAL_PWR_EnterSTOPMode( PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
@@ -144,13 +137,17 @@ void SystemClock_Config(void) {
 	/** Configure the main internal regulator output voltage
 	 */
 	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+	/** Configure LSE Drive Capability
+	 */
+	HAL_PWR_EnableBkUpAccess();
+	__HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_LOW);
 	/** Initializes the RCC Oscillators according to the specified parameters
 	 * in the RCC_OscInitTypeDef structure.
 	 */
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSI;
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSE;
+	RCC_OscInitStruct.LSEState = RCC_LSE_ON;
 	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
 	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-	RCC_OscInitStruct.LSIState = RCC_LSI_ON;
 	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
 	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
 		Error_Handler();
@@ -169,7 +166,7 @@ void SystemClock_Config(void) {
 	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1 | RCC_PERIPHCLK_USART2 | RCC_PERIPHCLK_RTC;
 	PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
 	PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
-	PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+	PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
 	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
 		Error_Handler();
 	}
@@ -197,12 +194,26 @@ void MainProc() {
 			wasteParameters.setupMode = 0;
 		}
 	}
+	wasteParameters.gpsAlarmCount++;
+	if (wasteParameters.gpsAlarmCount >= ALARM_WORK_PERIOD) {
+			wasteParameters.gpsAlarmCount = 0;
+	}
 	if (wasteParameters.setupMode) {
 		DebugSendData("Setup Mode Enable", 17);
 	} else {
 		DebugSendData("Setup Mode Disable", 18);
 	}
-	if (wasteParameters.wakeUpCount == 0 || wasteParameters.tempVal >= CRITICAL_TEMPERATURE || (wasteParameters.setupMode && wasteParameters.setupCount % 2 == 1)) {
+	if (wasteParameters.preDataSendError) {
+		DebugSendData("Prev Data Send Error", 20);
+	} else {
+		DebugSendData("Prev Data Send Success", 22);
+	}
+	if (wasteParameters.gpsAlarm) {
+		DebugSendData("Gps Alarm Enable", 16);
+	} else {
+		DebugSendData("Gps Alarm Disable", 17);
+	}
+	if (wasteParameters.wakeUpCount == 0 || wasteParameters.tempVal >= CRITICAL_TEMPERATURE || (wasteParameters.setupMode) || (wasteParameters.preDataSendError == 1 && wasteParameters.wakeUpCount == ALARM_WORK_PERIOD) || wasteParameters.gpsAlarm == 1) {
 
 		wasteParameters.wakeUpCount = 0;
 		LTEInitParams();
@@ -212,57 +223,51 @@ void MainProc() {
 		HAL_Delay(1000);
 		UsrDisable();
 		HAL_Delay(1000);
-		LTEPowerOn();
-		HAL_Delay(1000);
-		if (lteParameters.uartResMessage == MESG_POWERDOWN) {
-			DebugSendData("Power On Again", 14);
+		DebugSendData("LTE Op Start", 12);
+		if (wasteParameters.gpsAlarm == 0) {
+			LTEEnable();
+			HAL_Delay(1000);
 			LTEPowerOn();
 			HAL_Delay(1000);
-		}
-		LTEReset();
-		HAL_Delay(1000);
-		for (int i = 0; i < 10; ++i) {
-			LTEAt();
-			HAL_Delay(1000);
-			if (lteParameters.uartResHeader == HEAD_OK) {
-				break;
+			if (lteParameters.uartResMessage == MESG_POWERDOWN) {
+				DebugSendData("Power On Again", 14);
+				LTEPowerOn();
+				HAL_Delay(1000);
 			}
 		}
-//		LTEAti();
-//		HAL_Delay(1000);
-		LTEGetIMEI();
+		wasteParameters.preDataSendError = 1;
+		LTEAt();
 		HAL_Delay(1000);
-		LTEGetImsi();
-		HAL_Delay(1000);
-//		LTEGPSPowerOn();
-//		HAL_Delay(1000);
-//		LTEGPSNmeaConfig();
-//		HAL_Delay(1000);
-//		for (int i = 0; i < 1000; ++i) {
-//			LTEGPSGetNmeaData();
-//			HAL_Delay(1000);
-//		}
-//		LTEGPSPowerOff();
-//		HAL_Delay(1000);
-		SetSendData();
-		HAL_Delay(1000);
-		LTEPdpConfigure();
-		HAL_Delay(500);
-		LTEPdpOpen();
-		HAL_Delay(1000);
-		LTEOpenConnection();
-		HAL_Delay(1000);
-		LTEPrepToSendData();
-		HAL_Delay(1000);
-		LTESendMsg();
-		HAL_Delay(1000);
-		LTECloseConnection();
-		HAL_Delay(1000);
-		LTEPdpClose();
-		HAL_Delay(1000);
-		LTEPowerOff();
-		HAL_Delay(1000);
-
+			LTEGetIMEI();
+			HAL_Delay(1000);
+			LTEGetImsi();
+			HAL_Delay(1000);
+			SetSendData();
+			HAL_Delay(1000);
+			LTEPdpConfigure();
+			HAL_Delay(1000);
+			LTEPdpOpen();
+			HAL_Delay(1000);
+			LTEOpenConnection();
+			HAL_Delay(1000);
+			LTEPrepToSendData();
+			HAL_Delay(1000);
+			LTESendMsg();
+			HAL_Delay(1000);
+			LTEReceiveMsg();
+			HAL_Delay(1000);
+			LTECloseConnection();
+			HAL_Delay(1000);
+			LTEPdpClose();
+			HAL_Delay(1000);
+		if (wasteParameters.gpsAlarm == 0) {
+			LTEPowerOff();
+			HAL_Delay(1000);
+			LTEPowerOffWithUart();
+			HAL_Delay(1000);
+			LTEDisable();
+		}
+		DebugSendData("LTE Op Stop", 11);
 		lteParameters.contexId++;
 		lteParameters.sessionId++;
 		if (lteParameters.contexId >= 9)

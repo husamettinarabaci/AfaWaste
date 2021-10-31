@@ -28,6 +28,8 @@
 
 rtcParams_typedef rtcParameters;
 
+#include "main.h"
+
 /* USER CODE END 0 */
 
 RTC_HandleTypeDef hrtc;
@@ -59,7 +61,7 @@ void MX_RTC_Init(void)
   }
   /** Enable the WakeUp
   */
-  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, WAKEUP_PERIOD_IN_SECOND, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 600, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
   {
     Error_Handler();
   }
@@ -114,7 +116,8 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
 	rtcParameters.wakeUpFlag = 1;
 	usrParameters.usrMeasured = 0;
 
-	//HAL_ResumeTick();
+	SystemClock_Config();
+	HAL_ResumeTick();
 }
 /* USER CODE END 1 */
 

@@ -56,8 +56,11 @@ void WasteInit() {
 	}
 
 	rtcParameters.wakeUpFlag = 1;
+	wasteParameters.preDataSendError=0;
 	wasteParameters.wakeUpCount = 0;
 	wasteParameters.setupCount=0;
+	wasteParameters.gpsAlarm=0;
+	wasteParameters.gpsAlarmCount=0;
 wasteParameters.setupMode=1;
 	adcParameters.adcReadEnableFlag = 1;
 	lteParameters.powerState = PWR_PASSIVE;
@@ -66,15 +69,14 @@ wasteParameters.setupMode=1;
 
 void DebugSendData(const char *msg, uint8_t msgSize) {
 #ifdef DEBUG
-	memset(debugMessages.MEESAGE, '-', 138);
+	if (msgSize > 250)msgSize=250;
+	memset(debugMessages.MEESAGE, '-', msgSize+2);
 	for (int i = 0; i < msgSize; ++i) {
-		if (i < 138) {
 			debugMessages.MEESAGE[i] =(char) msg[i];
-		}
 	}
-	debugMessages.MEESAGE[136] = '\r';
-	debugMessages.MEESAGE[137] = '\n';
-	HAL_UART_Transmit(&huart2, (uint8_t*) debugMessages.MEESAGE, sizeof(debugMessages.MEESAGE), HAL_MAX_DELAY); // Send message to the debug
+	debugMessages.MEESAGE[msgSize] = '\r';
+	debugMessages.MEESAGE[msgSize+1] = '\n';
+	HAL_UART_Transmit(&huart2, (uint8_t*) debugMessages.MEESAGE,msgSize+2, HAL_MAX_DELAY); // Send message to the debug
 #endif
 
 }

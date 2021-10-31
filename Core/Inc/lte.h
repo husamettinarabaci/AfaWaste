@@ -30,8 +30,7 @@ extern "C" {
 
 /* USER CODE BEGIN Private defines */
 #define LTE_PWRKEY_ENABLE_TIME 2000
-#define LTE_RESET_ENABLE_TIME 2000
-#define LTE_PWRKEY_DISABLE_TIME 10000
+#define LTE_PWRKEY_DISABLE_TIME 5000
 #define LTE_GPS_FIX_WAIT_TIMEOUT 90000 // in milliseconds
 
 typedef enum
@@ -43,7 +42,8 @@ typedef enum
 typedef enum
 {
 	MESG_NONE= 1,
-	MESG_POWERDOWN
+	MESG_POWERDOWN,
+	MESG_AGPS
 } lteUartResMesgStates_typedef;
 
 typedef enum
@@ -80,14 +80,17 @@ typedef struct
 	char AT_QGPSLOC[14];
 	char AT_QIOPEN[60];
 	char AT_QISEND[16];
+	char AT_QIRD[13];
 	char AT_QICLOSE[14];
 	char AT_QIACT[12];
 	char AT_QIDEACT[14];
 	char AT_QICSGP[29];
 	char AT_CFUN[13];
+	char AT_CFUNS[11];
 	char AT_QGPSCFG[24];
 	char AT_QGPSGNMEA[20];
 	char AT_CIMI[9];
+	char SENDDATA[8];
 	char POWER_ON[8];
 	char POWER_OFF[9];
 } lteMessages_typedef;
@@ -110,11 +113,7 @@ void LTEPrepToSendData(void);
 void LTESendMsg(void);
 void LTECloseConnection(void);
 void LTEAt(void);
-void LTEAti(void);
-void LTEReset(void);
-void LTEGPSPowerOn(void);
-void LTEGPSPowerOff(void);
-void LTEGPSGetData(void);
+void LTEResetWithUart(void);
 void SearchStatu();
 uint8_t SearchMessage(uint8_t startInd,char msg[],uint8_t msgSize);
 void LTEActiveBuffer(void);
@@ -123,9 +122,10 @@ void LTEPowerOffWithUart(void);
 void LTEPdpOpen(void);
 void LTEPdpClose(void);
 void LTEPdpConfigure(void);
-void LTEGPSNmeaConfig(void);
+void LTEReceiveMsg(void);
 void LTEGetImsi(void);
-void LTEGPSGetNmeaData(void);
+void LTEEnable(void);
+void LTEDisable(void);
 char ConvertIdToChar(uint8_t);
 
 /* USER CODE END Prototypes */

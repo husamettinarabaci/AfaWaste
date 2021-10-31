@@ -37,7 +37,8 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+void SetSendData(void);
+void MainProc(void);
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -52,8 +53,7 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
-void SetSendData(void);
-void MainProc(void);
+
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
@@ -63,8 +63,8 @@ void MainProc(void);
 #define UART_RX_LTE_GPIO_Port GPIOA
 #define UART_TX_LTE_Pin GPIO_PIN_9
 #define UART_TX_LTE_GPIO_Port GPIOA
-#define LTE_RESET_Pin GPIO_PIN_1
-#define LTE_RESET_GPIO_Port GPIOA
+#define LTE_ENABLE_Pin GPIO_PIN_1
+#define LTE_ENABLE_GPIO_Port GPIOA
 #define LTE_PWRKEY_Pin GPIO_PIN_0
 #define LTE_PWRKEY_GPIO_Port GPIOA
 #define ULT_ENABLE_Pin GPIO_PIN_11

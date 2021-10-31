@@ -1,4 +1,4 @@
-rtc.c:36:6:MX_RTC_Init	8	static
-rtc.c:72:6:HAL_RTC_MspInit	16	static
-rtc.c:92:6:HAL_RTC_MspDeInit	16	static
-rtc.c:112:6:HAL_RTCEx_WakeUpTimerEventCallback	16	static
+rtc.c:38:6:MX_RTC_Init	8	static
+rtc.c:74:6:HAL_RTC_MspInit	16	static
+rtc.c:94:6:HAL_RTC_MspDeInit	16	static
+rtc.c:114:6:HAL_RTCEx_WakeUpTimerEventCallback	16	static
