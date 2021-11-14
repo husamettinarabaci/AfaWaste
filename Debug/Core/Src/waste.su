@@ -1,2 +1,2 @@
 waste.c:46:6:WasteInit	16	static
-waste.c:70:6:DebugSendData	24	static
+waste.c:73:6:DebugSendData	24	static

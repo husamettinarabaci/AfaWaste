@@ -34,20 +34,17 @@ extern "C" {
 #define USR_PWROFF_TIMEOUT 100
 #define USR_EMIT_PROC_TIMEOUT 500
 #define USR_MEASURE_COUNT 10
+#define USR_MEASURE_TOTAL_COUNT 24
 
-typedef enum
-{
-	NEAR = 1,
-	FAR = 2
-} usrStates_typedef;
 
 typedef struct
 {
-	usrStates_typedef readDistance;
 	uint8_t usrReadyRead;
 	uint16_t measureRepCount;
+	uint16_t measureRepTotalCount;
 	uint16_t measurementValue;
 	uint16_t usrMeasArray[USR_MEASURE_COUNT];
+	uint16_t usrMeasTotalArray[USR_MEASURE_TOTAL_COUNT];
 	uint8_t usrMeasured;
 } usrParams_typedef;
 

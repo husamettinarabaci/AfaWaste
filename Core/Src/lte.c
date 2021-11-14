@@ -28,7 +28,7 @@ void LTEInitParams() {
 	strcpy(lteMessages.AT_QIOPEN, "AT+QIOPEN=1,0,\"TCP\",\"listener.aws.afatek.com.tr\",20000\r");
 	lteMessages.AT_QIOPEN[10] = ConvertIdToChar(lteParameters.contexId);
 	lteMessages.AT_QIOPEN[12] = ConvertIdToChar(lteParameters.sessionId);
-	strcpy(lteMessages.AT_QISEND, "AT+QISEND=0,128\r");
+	strcpy(lteMessages.AT_QISEND, "AT+QISEND=0,215\r");
 	lteMessages.AT_QISEND[10] = ConvertIdToChar(lteParameters.sessionId);
 	strcpy(lteMessages.AT_QIRD, "AT+QIRD=0,50\r");
 	lteMessages.AT_QIRD[8] = ConvertIdToChar(lteParameters.sessionId);
@@ -242,7 +242,7 @@ void LTESendMsg() {
 	DebugSendData("LTE Send Msg", 12);
 	wasteParameters.gpsAlarm=0;
 	LTEActiveBuffer();
-	LTESendData(huart1, lteParameters.msgToSend, 128);
+	LTESendData(huart1, lteParameters.msgToSend, 215);
 	for (int i = 0; i < 10; ++i) {
 		LTEResponseParserBuffer(2000, lteMessages.SENDDATA, sizeof(lteMessages.SENDDATA));
 		if (lteParameters.uartResHeader == HEAD_OK) {

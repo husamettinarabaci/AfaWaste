@@ -1,4 +1,4 @@
-usr.c:25:6:UsrEnable	8	static
-usr.c:35:6:UsrDisable	8	static
-usr.c:46:6:UsrEmit	8	static
-usr.c:59:6:UsrMeasure	16	static
+usr.c:24:6:UsrEnable	8	static
+usr.c:33:6:UsrDisable	8	static
+usr.c:42:6:UsrEmit	8	static
+usr.c:52:6:UsrMeasure	24	static

@@ -89,6 +89,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	{
 		if(usrParameters.usrReadyRead)
 		{
+			usrParameters.usrReadyRead = 0;
 			usrParameters.measurementValue = __HAL_TIM_GET_COUNTER(&htim2);
 		}
 	}

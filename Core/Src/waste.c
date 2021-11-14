@@ -46,6 +46,7 @@ debugMessages_typedef debugMessages;
 void WasteInit() {
 	HAL_TIM_Base_Start(&htim2);
 	usrParameters.measureRepCount = USR_MEASURE_COUNT;
+	usrParameters.measureRepTotalCount = USR_MEASURE_TOTAL_COUNT;
 	usrParameters.measurementValue = 0;
 	lteParameters.contexId = 1;
 	lteParameters.sessionId = 0;
@@ -58,6 +59,8 @@ void WasteInit() {
 	rtcParameters.wakeUpFlag = 1;
 	wasteParameters.preDataSendError=0;
 	wasteParameters.wakeUpCount = 0;
+	wasteParameters.ultSensIndex= 0;
+	wasteParameters.ultSensCount = 0;
 	wasteParameters.setupCount=0;
 	wasteParameters.gpsAlarm=0;
 	wasteParameters.gpsAlarmCount=0;

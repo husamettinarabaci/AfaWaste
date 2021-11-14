@@ -30,12 +30,15 @@ extern "C" {
 /* USER CODE BEGIN Private defines */
 #define NORMAL_WORK_PERIOD 24
 #define ALARM_WORK_PERIOD 6
+#define ULTL_WORK_PERIOD 6
 #define SETUP_WORK_PERIOD 3
 #define CRITICAL_TEMPERATURE 80
 
 typedef struct
 {
 	uint8_t wakeUpCount;
+	uint8_t ultSensCount;
+	uint8_t ultSensIndex;
 	uint16_t voltVal;
 	uint8_t tempVal;
 	uint8_t setupCount;

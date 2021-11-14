@@ -60,7 +60,7 @@ typedef struct
 	uint8_t imsiNum[15];
 	uint8_t latitudeData[11];
 	uint8_t longitudeData[11];
-	char msgToSend[128];
+	char msgToSend[215];
 	uint8_t uartResHeader;
 	uint8_t uartResMessage;
 	uint8_t powerState;

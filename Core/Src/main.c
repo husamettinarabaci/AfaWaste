@@ -196,7 +196,7 @@ void MainProc() {
 	}
 	wasteParameters.gpsAlarmCount++;
 	if (wasteParameters.gpsAlarmCount >= ALARM_WORK_PERIOD) {
-			wasteParameters.gpsAlarmCount = 0;
+		wasteParameters.gpsAlarmCount = 0;
 	}
 	if (wasteParameters.setupMode) {
 		DebugSendData("Setup Mode Enable", 17);
@@ -213,16 +213,32 @@ void MainProc() {
 	} else {
 		DebugSendData("Gps Alarm Disable", 17);
 	}
-	if (wasteParameters.wakeUpCount == 0 || wasteParameters.tempVal >= CRITICAL_TEMPERATURE || (wasteParameters.setupMode) || (wasteParameters.preDataSendError == 1 && wasteParameters.wakeUpCount == ALARM_WORK_PERIOD) || wasteParameters.gpsAlarm == 1) {
+	if (wasteParameters.ultSensCount == 0) {
+		if (wasteParameters.ultSensIndex >= USR_MEASURE_TOTAL_COUNT) {
+			wasteParameters.ultSensIndex = 0;
+		}
+		if (wasteParameters.ultSensIndex == 0) {
+			for (int i = 0; i < usrParameters.measureRepTotalCount; ++i) {
+				usrParameters.usrMeasTotalArray[i] = 0;
+			}
+		}
 
-		wasteParameters.wakeUpCount = 0;
-		LTEInitParams();
 		UsrEnable();
 		HAL_Delay(1000);
 		UsrMeasure();
 		HAL_Delay(1000);
 		UsrDisable();
 		HAL_Delay(1000);
+		wasteParameters.ultSensIndex++;
+	}
+	wasteParameters.ultSensCount++;
+	if (wasteParameters.ultSensCount >= ULTL_WORK_PERIOD) {
+		wasteParameters.ultSensCount = 0;
+	}
+	if (wasteParameters.wakeUpCount == 0 || wasteParameters.tempVal >= CRITICAL_TEMPERATURE || (wasteParameters.setupMode) || (wasteParameters.preDataSendError == 1 && wasteParameters.wakeUpCount == ALARM_WORK_PERIOD) || wasteParameters.gpsAlarm == 1) {
+
+		wasteParameters.wakeUpCount = 0;
+		LTEInitParams();
 		DebugSendData("LTE Op Start", 12);
 		if (wasteParameters.gpsAlarm == 0) {
 			LTEEnable();
@@ -238,28 +254,28 @@ void MainProc() {
 		wasteParameters.preDataSendError = 1;
 		LTEAt();
 		HAL_Delay(1000);
-			LTEGetIMEI();
-			HAL_Delay(1000);
-			LTEGetImsi();
-			HAL_Delay(1000);
-			SetSendData();
-			HAL_Delay(1000);
-			LTEPdpConfigure();
-			HAL_Delay(1000);
-			LTEPdpOpen();
-			HAL_Delay(1000);
-			LTEOpenConnection();
-			HAL_Delay(1000);
-			LTEPrepToSendData();
-			HAL_Delay(1000);
-			LTESendMsg();
-			HAL_Delay(1000);
-			LTEReceiveMsg();
-			HAL_Delay(1000);
-			LTECloseConnection();
-			HAL_Delay(1000);
-			LTEPdpClose();
-			HAL_Delay(1000);
+		LTEGetIMEI();
+		HAL_Delay(1000);
+		LTEGetImsi();
+		HAL_Delay(1000);
+		SetSendData();
+		HAL_Delay(1000);
+		LTEPdpConfigure();
+		HAL_Delay(1000);
+		LTEPdpOpen();
+		HAL_Delay(1000);
+		LTEOpenConnection();
+		HAL_Delay(1000);
+		LTEPrepToSendData();
+		HAL_Delay(1000);
+		LTESendMsg();
+		HAL_Delay(1000);
+		LTEReceiveMsg();
+		HAL_Delay(1000);
+		LTECloseConnection();
+		HAL_Delay(1000);
+		LTEPdpClose();
+		HAL_Delay(1000);
 		if (wasteParameters.gpsAlarm == 0) {
 			LTEPowerOff();
 			HAL_Delay(1000);
@@ -283,7 +299,7 @@ void MainProc() {
 	}
 }
 void SetSendData() {
-	memset(lteParameters.msgToSend, '*', 128);
+	memset(lteParameters.msgToSend, '*', 215);
 	DebugSendData("Set Send Data", 13);
 	lteParameters.msgToSend[0] = 'U';
 	lteParameters.msgToSend[1] = 'L';
@@ -315,71 +331,29 @@ void SetSendData() {
 		sprintf(&lteParameters.msgToSend[41 + i], "%c", lteParameters.longitudeData[i]);
 
 	lteParameters.msgToSend[52] = '#';
-	sprintf(&lteParameters.msgToSend[53], "%d", ((uint16_t) (usrParameters.usrMeasArray[0] % 100000) - (uint16_t) (usrParameters.usrMeasArray[0] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[54], "%d", ((uint16_t) (usrParameters.usrMeasArray[0] % 10000) - (uint16_t) (usrParameters.usrMeasArray[0] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[55], "%d", ((uint16_t) (usrParameters.usrMeasArray[0] % 1000) - (uint16_t) (usrParameters.usrMeasArray[0] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[56], "%d", ((uint16_t) (usrParameters.usrMeasArray[0] % 100) - (uint16_t) (usrParameters.usrMeasArray[0] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[57], "%d", (uint16_t) (usrParameters.usrMeasArray[0] % 10));
-	lteParameters.msgToSend[58] = '#';
-	sprintf(&lteParameters.msgToSend[59], "%d", ((uint16_t) (usrParameters.usrMeasArray[1] % 100000) - (uint16_t) (usrParameters.usrMeasArray[1] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[60], "%d", ((uint16_t) (usrParameters.usrMeasArray[1] % 10000) - (uint16_t) (usrParameters.usrMeasArray[1] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[61], "%d", ((uint16_t) (usrParameters.usrMeasArray[1] % 1000) - (uint16_t) (usrParameters.usrMeasArray[1] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[62], "%d", ((uint16_t) (usrParameters.usrMeasArray[1] % 100) - (uint16_t) (usrParameters.usrMeasArray[1] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[63], "%d", (uint16_t) (usrParameters.usrMeasArray[1] % 10));
-	lteParameters.msgToSend[64] = '#';
-	sprintf(&lteParameters.msgToSend[65], "%d", ((uint16_t) (usrParameters.usrMeasArray[2] % 100000) - (uint16_t) (usrParameters.usrMeasArray[2] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[66], "%d", ((uint16_t) (usrParameters.usrMeasArray[2] % 10000) - (uint16_t) (usrParameters.usrMeasArray[2] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[67], "%d", ((uint16_t) (usrParameters.usrMeasArray[2] % 1000) - (uint16_t) (usrParameters.usrMeasArray[2] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[68], "%d", ((uint16_t) (usrParameters.usrMeasArray[2] % 100) - (uint16_t) (usrParameters.usrMeasArray[2] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[69], "%d", (uint16_t) (usrParameters.usrMeasArray[2] % 10));
-	lteParameters.msgToSend[70] = '#';
-	sprintf(&lteParameters.msgToSend[71], "%d", ((uint16_t) (usrParameters.usrMeasArray[3] % 100000) - (uint16_t) (usrParameters.usrMeasArray[3] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[72], "%d", ((uint16_t) (usrParameters.usrMeasArray[3] % 10000) - (uint16_t) (usrParameters.usrMeasArray[3] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[73], "%d", ((uint16_t) (usrParameters.usrMeasArray[3] % 1000) - (uint16_t) (usrParameters.usrMeasArray[3] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[74], "%d", ((uint16_t) (usrParameters.usrMeasArray[3] % 100) - (uint16_t) (usrParameters.usrMeasArray[3] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[75], "%d", (uint16_t) (usrParameters.usrMeasArray[3] % 10));
-	lteParameters.msgToSend[76] = '#';
-	sprintf(&lteParameters.msgToSend[77], "%d", ((uint16_t) (usrParameters.usrMeasArray[4] % 100000) - (uint16_t) (usrParameters.usrMeasArray[4] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[78], "%d", ((uint16_t) (usrParameters.usrMeasArray[4] % 10000) - (uint16_t) (usrParameters.usrMeasArray[4] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[79], "%d", ((uint16_t) (usrParameters.usrMeasArray[4] % 1000) - (uint16_t) (usrParameters.usrMeasArray[4] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[80], "%d", ((uint16_t) (usrParameters.usrMeasArray[4] % 100) - (uint16_t) (usrParameters.usrMeasArray[4] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[81], "%d", (uint16_t) (usrParameters.usrMeasArray[4] % 10));
-	lteParameters.msgToSend[82] = '#';
-	sprintf(&lteParameters.msgToSend[83], "%d", ((uint16_t) (usrParameters.usrMeasArray[5] % 100000) - (uint16_t) (usrParameters.usrMeasArray[5] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[84], "%d", ((uint16_t) (usrParameters.usrMeasArray[5] % 10000) - (uint16_t) (usrParameters.usrMeasArray[5] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[85], "%d", ((uint16_t) (usrParameters.usrMeasArray[5] % 1000) - (uint16_t) (usrParameters.usrMeasArray[5] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[86], "%d", ((uint16_t) (usrParameters.usrMeasArray[5] % 100) - (uint16_t) (usrParameters.usrMeasArray[5] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[87], "%d", (uint16_t) (usrParameters.usrMeasArray[5] % 10));
-	lteParameters.msgToSend[88] = '#';
-	sprintf(&lteParameters.msgToSend[89], "%d", ((uint16_t) (usrParameters.usrMeasArray[6] % 100000) - (uint16_t) (usrParameters.usrMeasArray[6] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[90], "%d", ((uint16_t) (usrParameters.usrMeasArray[6] % 10000) - (uint16_t) (usrParameters.usrMeasArray[6] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[91], "%d", ((uint16_t) (usrParameters.usrMeasArray[6] % 1000) - (uint16_t) (usrParameters.usrMeasArray[6] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[92], "%d", ((uint16_t) (usrParameters.usrMeasArray[6] % 100) - (uint16_t) (usrParameters.usrMeasArray[6] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[93], "%d", (uint16_t) (usrParameters.usrMeasArray[6] % 10));
-	lteParameters.msgToSend[94] = '#';
-	sprintf(&lteParameters.msgToSend[95], "%d", ((uint16_t) (usrParameters.usrMeasArray[7] % 100000) - (uint16_t) (usrParameters.usrMeasArray[7] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[96], "%d", ((uint16_t) (usrParameters.usrMeasArray[7] % 10000) - (uint16_t) (usrParameters.usrMeasArray[7] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[97], "%d", ((uint16_t) (usrParameters.usrMeasArray[7] % 1000) - (uint16_t) (usrParameters.usrMeasArray[7] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[98], "%d", ((uint16_t) (usrParameters.usrMeasArray[7] % 100) - (uint16_t) (usrParameters.usrMeasArray[7] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[99], "%d", (uint16_t) (usrParameters.usrMeasArray[7] % 10));
-	lteParameters.msgToSend[100] = '#';
-	sprintf(&lteParameters.msgToSend[101], "%d", ((uint16_t) (usrParameters.usrMeasArray[8] % 100000) - (uint16_t) (usrParameters.usrMeasArray[8] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[102], "%d", ((uint16_t) (usrParameters.usrMeasArray[8] % 10000) - (uint16_t) (usrParameters.usrMeasArray[8] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[103], "%d", ((uint16_t) (usrParameters.usrMeasArray[8] % 1000) - (uint16_t) (usrParameters.usrMeasArray[8] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[104], "%d", ((uint16_t) (usrParameters.usrMeasArray[8] % 100) - (uint16_t) (usrParameters.usrMeasArray[8] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[105], "%d", (uint16_t) (usrParameters.usrMeasArray[8] % 10));
-	lteParameters.msgToSend[106] = '#';
-	sprintf(&lteParameters.msgToSend[107], "%d", ((uint16_t) (usrParameters.usrMeasArray[9] % 100000) - (uint16_t) (usrParameters.usrMeasArray[9] % 10000)) / 10000);
-	sprintf(&lteParameters.msgToSend[108], "%d", ((uint16_t) (usrParameters.usrMeasArray[9] % 10000) - (uint16_t) (usrParameters.usrMeasArray[9] % 1000)) / 1000);
-	sprintf(&lteParameters.msgToSend[109], "%d", ((uint16_t) (usrParameters.usrMeasArray[9] % 1000) - (uint16_t) (usrParameters.usrMeasArray[9] % 100)) / 100);
-	sprintf(&lteParameters.msgToSend[110], "%d", ((uint16_t) (usrParameters.usrMeasArray[9] % 100) - (uint16_t) (usrParameters.usrMeasArray[9] % 10)) / 10);
-	sprintf(&lteParameters.msgToSend[111], "%d", (uint16_t) (usrParameters.usrMeasArray[9] % 10));
+	for (int i = 53; i < 68; i++)
+		sprintf(&lteParameters.msgToSend[i], "%c", lteParameters.imsiNum[i - 53]);
 
-	lteParameters.msgToSend[112] = '#';
-	for (int i = 113; i < 128; i++)
-		sprintf(&lteParameters.msgToSend[i], "%c", lteParameters.imsiNum[i - 113]);
+	lteParameters.msgToSend[68] = '#';
+	sprintf(&lteParameters.msgToSend[69], "%d", ((uint16_t) (wasteParameters.ultSensIndex % 100) - (uint16_t) (wasteParameters.ultSensIndex % 10)) / 10);
+	sprintf(&lteParameters.msgToSend[70], "%d", (uint16_t) (wasteParameters.ultSensIndex % 10));
+	uint8_t ind = 71;
+	for (uint16_t cnt = 0; cnt < usrParameters.measureRepTotalCount; cnt++) {
+		lteParameters.msgToSend[ind] = '#';
+		ind++;
+		sprintf(&lteParameters.msgToSend[ind], "%d", ((uint16_t) (usrParameters.usrMeasTotalArray[cnt] % 100000) - (uint16_t) (usrParameters.usrMeasTotalArray[cnt] % 10000)) / 10000);
+		ind++;
+		sprintf(&lteParameters.msgToSend[ind], "%d", ((uint16_t) (usrParameters.usrMeasTotalArray[cnt] % 10000) - (uint16_t) (usrParameters.usrMeasTotalArray[cnt] % 1000)) / 1000);
+		ind++;
+		sprintf(&lteParameters.msgToSend[ind], "%d", ((uint16_t) (usrParameters.usrMeasTotalArray[cnt] % 1000) - (uint16_t) (usrParameters.usrMeasTotalArray[cnt] % 100)) / 100);
+		ind++;
+		sprintf(&lteParameters.msgToSend[ind], "%d", ((uint16_t) (usrParameters.usrMeasTotalArray[cnt] % 100) - (uint16_t) (usrParameters.usrMeasTotalArray[cnt] % 10)) / 10);
+		ind++;
+		sprintf(&lteParameters.msgToSend[ind], "%d", (uint16_t) (usrParameters.usrMeasTotalArray[cnt] % 10));
+		ind++;
+	}
 
-	DebugSendData(lteParameters.msgToSend, 128);
+	DebugSendData(lteParameters.msgToSend, 215);
 }
 /* USER CODE END 4 */
 
